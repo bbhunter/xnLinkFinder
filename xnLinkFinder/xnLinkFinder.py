@@ -3587,6 +3587,66 @@ def processOutput():
             writerr(colored("ERROR processOutput 1: " + str(e), "red"))
 
 
+def getXnLinkFinderPath():
+    """Get the OS-specific path for xnLinkFinder config directory."""
+    if os.name == "nt":
+        return Path(os.path.join(os.getenv("APPDATA", ""), "xnLinkFinder"))
+    elif os.name == "posix":
+        return Path(os.path.join(os.path.expanduser("~"), ".config", "xnLinkFinder"))
+    elif os.name == "darwin":
+        return Path(
+            os.path.join(
+                os.path.expanduser("~"),
+                "Library",
+                "Application Support",
+                "xnLinkFinder",
+            )
+        )
+    return None
+
+
+def ensureConfigExists():
+    """Create the config.yml file with default values if it doesn't exist."""
+    try:
+        xnLinkFinderPath = getXnLinkFinderPath()
+        if xnLinkFinderPath is None:
+            return
+        configPath = Path(xnLinkFinderPath / "config.yml")
+        if not configPath.exists():
+            # Build the default config content
+            defaultConfig = (
+                "linkExclude: " + DEFAULT_LINK_EXCLUSIONS + "\n"
+                "contentExclude: " + DEFAULT_CONTENTTYPE_EXCLUSIONS + "\n"
+                "fileExtExclude: " + DEFAULT_FILEEXT_EXCLUSIONS + "\n"
+                "regexFiles: " + DEFAULT_LINK_REGEX_FILES + "\n"
+                "respParamLinksFound: True\n"
+                "respParamPathWords: True\n"
+                "respParamJSON: True\n"
+                "respParamJSVars: True\n"
+                "respParamXML: True\n"
+                "respParamInputField: True\n"
+                "wordsContentTypes: " + DEFAULT_WORDS_CONTENT_TYPES + "\n"
+                "stopWords: " + DEFAULT_STOP_WORDS + "\n"
+                "commonTLDs: " + DEFAULT_COMMON_TLDS + "\n"
+            )
+            # Create the directory if it doesn't exist
+            xnLinkFinderPath.mkdir(parents=True, exist_ok=True)
+            configPath.write_text(defaultConfig)
+            writerr(
+                colored(
+                    "The config.yml file was created at " + str(configPath) + "\n",
+                    "cyan",
+                )
+            )
+    except Exception as e:
+        writerr(
+            colored(
+                "WARNING: Unable to create config.yml: " + str(e),
+                "yellow",
+            )
+        )
+
+
 def getConfig():
     # Try to get the values from the config file, otherwise use the defaults
     global LINK_EXCLUSIONS, CONTENTTYPE_EXCLUSIONS, FILEEXT_EXCLUSIONS, LINK_REGEX_FILES, RESP_PARAM_LINKSFOUND, RESP_PARAM_PATHWORDS, RESP_PARAM_JSON, RESP_PARAM_JSVARS, RESP_PARAM_XML, RESP_PARAM_INPUTFIELD, terminalWidth, WORDS_CONTENT_TYPES, STOP_WORDS, COMMON_TLDS, extraStopWords, lstStopWords
@@ -3599,26 +3659,7 @@ def getConfig():
             terminalWidth = 120
 
         # Get the path of the config file. If -c / --config argument is not passed, then it defaults to config.yml in the same directory as the run file
-        xnLinkFinderPath = (
-            Path(os.path.join(os.getenv("APPDATA", ""), "xnLinkFinder"))
-            if os.name == "nt"
-            else (
-                Path(os.path.join(os.path.expanduser("~"), ".config", "xnLinkFinder"))
-                if os.name == "posix"
-                else (
-                    Path(
-                        os.path.join(
-                            os.path.expanduser("~"),
-                            "Library",
-                            "Application Support",
-                            "xnLinkFinder",
-                        )
-                    )
-                    if os.name == "darwin"
-                    else None
-                )
-            )
-        )
+        xnLinkFinderPath = getXnLinkFinderPath()
         xnLinkFinderPath.absolute
         if args.config is None:
             if xnLinkFinderPath == "":
@@ -7214,6 +7255,10 @@ def main():
         "-vv", "--vverbose", action="store_true", help="Increased verbose output"
     )
     parser.add_argument("--version", action="store_true", help="Show version number")
+
+    # Ensure the config.yml file exists (create with defaults if missing)
+    ensureConfigExists()
+
     args = parser.parse_args()
 
     # If --version was passed, display version and exit

@@ -1,6 +1,6 @@
 <center><img src="https://github.com/xnl-h4ck3r/xnLinkFinder/blob/main/xnLinkFinder/images/title.png"></center>
 
-## About - v8.1
+## About - v8.2
 
 This is a tool used to discover endpoints, discover potential parameters, generate a target specific wordlist and find secrets for a given target. It can find them by:
 
